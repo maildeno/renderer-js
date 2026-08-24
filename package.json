@@ -1,0 +1,89 @@
+{
+  "name": "@maildeno/renderer",
+  "version": "0.1.0",
+  "description": "Render Maildeno email templates locally to HTML, MJML or React Email. No API calls, no network.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "typecheck": "tsc --noEmit",
+    "size": "size-limit",
+    "prepublishOnly": "npm run typecheck && npm run lint && npm run test && npm run build"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maildeno/renderer-js.git"
+  },
+  "homepage": "https://github.com/maildeno/renderer-js#readme",
+  "bugs": {
+    "url": "https://github.com/maildeno/renderer-js/issues"
+  },
+  "keywords": [
+    "maildeno",
+    "email",
+    "template",
+    "render",
+    "html",
+    "mjml",
+    "react-email",
+    "wasm",
+    "offline"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "Noruwa Obaseki (Maildeno)",
+    "url": "https://maildeno.com"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.2.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "eslint": "^10.9.0",
+    "size-limit": "^13.0.3",
+    "@size-limit/file": "^13.0.3",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.67.0",
+    "vitest": "^4.1.11"
+  },
+  "size-limit": [
+    {
+      "name": "JS bundle (index.mjs)",
+      "path": "dist/index.mjs",
+      "limit": "10 KB"
+    },
+    {
+      "name": "Wasm engine (engine.wasm)",
+      "path": "dist/engine.wasm",
+      "limit": "300 KB"
+    }
+  ]
+}

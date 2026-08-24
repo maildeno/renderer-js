@@ -1,0 +1,28 @@
+{
+  "template_id": "welcome_to_premium",
+  "template_name": "Welcome to Premium",
+  "canvas": { "backgroundColor": "#f4f4f5", "width": 600 },
+  "rows": [
+    {
+      "id": "row-1",
+      "columns": [
+        {
+          "id": "col-1",
+          "components": [
+            {
+              "id": "c-1",
+              "type": "heading",
+              "props": { "content": "Welcome, {{ first_name }}!", "level": 1 }
+            },
+            {
+              "id": "c-2",
+              "type": "paragraph",
+              "props": { "content": "Thanks for upgrading." }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "schema_version": "1.0"
+}
