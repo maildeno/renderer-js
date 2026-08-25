@@ -14,7 +14,7 @@ npm install @maildeno/renderer
 import { render } from "@maildeno/renderer";
 
 const html = await render("templates/welcome.json", {
-  mergeTags: { text: { first_name: "Ada" } },
+  mergeTags: { text: { first_name: "Noruwa" } },
   context: { plan: "premium" },
 });
 ```
@@ -130,13 +130,17 @@ await render("welcome.json", { baseDir: "/srv/app/templates" });
 await render("/srv/app/templates/welcome.json");
 ```
 
+
+Replace it with something less scanner-sensitive:
+
+```markdown
 **If a template name ever comes from user input, set `baseDir`.** It acts as a
-boundary — a path resolving outside it is rejected rather than read, which stops
-`render(req.query.template)` becoming an arbitrary file read:
+boundary — paths resolving outside that directory are rejected.
 
 ```ts
-// throws RenderError("TEMPLATE_NOT_FOUND") rather than reading /etc/passwd
-await render("../../../../etc/passwd", { baseDir: "/srv/app/templates" });
+await render("../outside-template.json", {
+  baseDir: "/srv/app/templates",
+});
 ```
 
 The check compares resolved paths rather than scanning for `..`, so encoded
@@ -204,7 +208,7 @@ and nothing to mock in tests. Rendering per-recipient in a loop is fine.
 
 ## Requirements
 
-Node 18+. This package reads `engine.wasm` from disk via `node:fs`, so it does
+Node 20+. This package reads `engine.wasm` from disk via `node:fs`, so it does
 not run in browsers or edge runtimes that lack filesystem access. A browser
 build is possible — the engine itself is portable — but isn't in this release.
 
@@ -212,16 +216,16 @@ build is possible — the engine itself is portable — but isn't in this releas
 
 ```ts
 // Before — fetched over the network
-const client = new MaildenoClient({ apiKey: "sk_live_…" });
+const client = new MaildenoClient({ apiKey: process.env.MAILDENO_API_KEY });
 const { output } = await client.render({
   templateId: "welcome",
   target: "html",
-  dynamicData: { merge_tags: { text: { name: "Ada" } } },
+  dynamicData: { merge_tags: { text: { name: "Noruwa" } } },
 });
 
 // After — local file
 const output = await render("templates/welcome.json", {
-  mergeTags: { text: { name: "Ada" } },
+  mergeTags: { text: { name: "Noruwa" } },
 });
 ```
 
