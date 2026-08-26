@@ -1,16 +1,46 @@
 {
   "name": "@maildeno/renderer",
-  "version": "0.1.0",
-  "description": "Render Maildeno email templates locally to HTML, MJML or React Email. No API calls, no network.",
+  "version": "0.2.0",
+  "description": "Render Maildeno email templates locally to HTML, MJML or React Email — in Node, browsers, and edge runtimes like Cloudflare Workers and Vercel Edge. No API calls, no network.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+
+      "node": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js"
+      },
+
+      "deno": {
+        "import": "./dist/index.edge.mjs",
+        "require": "./dist/index.edge.js"
+      },
+      "workerd": {
+        "import": "./dist/index.edge.mjs",
+        "require": "./dist/index.edge.js"
+      },
+      "edge-light": {
+        "import": "./dist/index.edge.mjs",
+        "require": "./dist/index.edge.js"
+      },
+      "browser": {
+        "import": "./dist/index.edge.mjs",
+        "require": "./dist/index.edge.js"
+      },
+
+      "import": "./dist/index.edge.mjs",
+      "require": "./dist/index.edge.js",
+      "default": "./dist/index.edge.mjs"
     },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.mjs",
+      "require": "./dist/core.js"
+    },
+    "./engine.wasm": "./dist/engine.wasm",
     "./package.json": "./package.json"
   },
   "files": [
@@ -48,7 +78,12 @@
     "mjml",
     "react-email",
     "wasm",
-    "offline"
+    "webassembly",
+    "offline",
+    "edge",
+    "cloudflare-workers",
+    "vercel-edge",
+    "browser"
   ],
   "license": "MIT",
   "author": {
@@ -76,14 +111,24 @@
   },
   "size-limit": [
     {
-      "name": "JS bundle (index.mjs)",
+      "name": "Node bundle (index.mjs)",
       "path": "dist/index.mjs",
       "limit": "10 KB"
     },
     {
-      "name": "Wasm engine (engine.wasm)",
+      "name": "Wasm engine, loose file (engine.wasm)",
       "path": "dist/engine.wasm",
       "limit": "300 KB"
+    },
+    {
+      "name": "Edge/browser bundle (index.edge.mjs, wasm inlined as base64)",
+      "path": "dist/index.edge.mjs",
+      "limit": "400 KB"
+    },
+    {
+      "name": "Core bundle (core.mjs, bring-your-own-instance, no wasm)",
+      "path": "dist/core.mjs",
+      "limit": "5 KB"
     }
   ]
 }

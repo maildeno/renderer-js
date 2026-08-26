@@ -1,8 +1,8 @@
 // tests/engine.test.ts
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { readFile } from "node:fs/promises";
-import { runEngine, __resetInstance } from "../src/engine.js";
-import { RenderError } from "../src/error.js";
+import { runEngine, __resetInstance } from "../../src/node/engine.js";
+import { RenderError } from "../../src/error.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 

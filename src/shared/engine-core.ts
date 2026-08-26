@@ -1,10 +1,13 @@
-// src/engine.ts
+// src/shared/engine-core.ts
 //
-// Wasm bridge to the compiled Rust rendering engine.
+// Portable Wasm calling convention — no Node or browser-specific APIs.
 //
-// Carried over from the API-era SDK essentially unchanged — the memory contract
-// and JSON envelope below are fixed by the compiled engine and are not ours to
-// change without recompiling it.
+// This is the part of the old engine.ts that never actually touched `fs`: once
+// something has handed over a live `WebAssembly.Instance`, running it is just
+// `WebAssembly` + `TextEncoder`/`TextDecoder`, all available identically in
+// Node, browsers, and every edge runtime. Getting *to* that instance — reading
+// engine.wasm off disk vs. decoding an embedded copy — is the part that
+// differs, and lives in `../node/engine.ts` / `../edge/engine.ts` instead.
 //
 // Memory contract with the Rust engine
 // ─────────────────────────────────────
@@ -30,71 +33,16 @@
 //   { "output": "...rendered string..." }   on success
 //   { "error":  "...message..." }           on failure
 
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { RenderError } from "../error.js";
+import type { Context, MergeTags, Target, Template } from "../types.js";
 
-import { RenderError } from "./error.js";
-import type { Context, MergeTags, Target, Template } from "./types.js";
-
-// ── Wasm instance (singleton, lazy-loaded) ────────────────────────────────────
-
-interface WasmExports {
+export interface WasmExports {
   memory: WebAssembly.Memory;
   alloc: (len: number) => number;
   dealloc: (ptr: number, len: number) => void;
   dealloc_str: (ptr: number) => void;
   render: (ptr: number, len: number) => number;
   heap_peak: () => number;
-}
-
-let _instance: WebAssembly.Instance | null = null;
-
-/**
- * Resets the cached Wasm instance. Only used in tests.
- * @internal
- */
-export function __resetInstance(): void {
-  _instance = null;
-}
-
-async function getInstance(): Promise<WebAssembly.Instance> {
-  if (_instance) return _instance;
-
-  // Resolve the directory that contains the *compiled* JS file at runtime.
-  //
-  // tsup outputs both ESM (index.mjs) and CJS (index.js) into dist/.
-  // engine.wasm is copied into dist/ alongside them by tsup.config.ts.
-  //
-  //   ESM  → import.meta.url is defined, e.g. file:///…/dist/index.mjs
-  //   CJS  → import.meta.url is undefined; use __filename instead
-  //
-  // We detect the format at runtime to get the correct directory in both cases.
-  const dir =
-    typeof __filename !== "undefined"
-      ? // CJS runtime — __filename / __dirname are injected by Node
-        join(__filename, "..")
-      : // ESM runtime — use import.meta.url
-        join(fileURLToPath(import.meta.url), "..");
-
-  const wasmPath = join(dir, "engine.wasm");
-
-  let bytes: Buffer;
-  try {
-    bytes = await readFile(wasmPath);
-  } catch (cause) {
-    throw new RenderError(
-      "RENDER_ERROR",
-      `Could not load engine.wasm from ${wasmPath}. ` +
-        `Make sure engine.wasm is in the same directory as the compiled JS. ` +
-        `Original error: ${cause instanceof Error ? cause.message : String(cause)}`,
-    );
-  }
-
-  // @ts-expect-error — WebAssembly.instantiate overload resolution incorrect for Buffer input
-  const { instance } = await WebAssembly.instantiate(bytes, {});
-  _instance = instance;
-  return _instance as WebAssembly.Instance;
 }
 
 // ── String helpers ────────────────────────────────────────────────────────────
@@ -115,24 +63,23 @@ function readCString(memory: WebAssembly.Memory, ptr: number): string {
   return new TextDecoder().decode(buf.subarray(ptr, end));
 }
 
-// ── Public render function ────────────────────────────────────────────────────
+// ── Public invocation function ────────────────────────────────────────────────
 
 /**
- * Runs the engine and returns the raw, un-minified output.
+ * Runs an already-instantiated engine and returns the raw, un-minified output.
  *
  * Minification is the caller's decision (see render.ts) — the engine has no
  * opinion on it, and keeping it out of here means this stays a pure bridge.
  *
- * @throws {RenderError} `RENDER_ERROR` if the engine reports a failure, or if
- *   engine.wasm cannot be found or loaded.
+ * @throws {RenderError} `RENDER_ERROR` if the engine reports a failure.
  */
-export async function runEngine(
+export async function invokeEngine(
+  instance: WebAssembly.Instance,
   template: Template,
   target: Target,
   mergeTags: MergeTags | undefined,
   context: Context | undefined,
 ): Promise<string> {
-  const instance = await getInstance();
   const exports = instance.exports as unknown as WasmExports;
   const memory = exports.memory;
 

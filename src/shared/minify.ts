@@ -1,4 +1,4 @@
-// src/minify.ts
+// src/shared/minify.ts
 //
 // Whitespace-only compaction for all render targets.
 //

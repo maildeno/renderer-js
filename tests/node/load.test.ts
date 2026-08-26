@@ -1,13 +1,13 @@
-// tests/load.test.ts
+// tests/node/load.test.ts
 import { describe, expect, it } from "vitest";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { render, RenderError } from "../src/index.js";
-import { resolveTemplate } from "../src/load.js";
+import { render, RenderError } from "../../src/index.js";
+import { resolveTemplate } from "../../src/node/load.js";
 
-const FIXTURES = join(__dirname, "fixtures");
+const FIXTURES = join(__dirname, "..", "fixtures");
 
 async function tmpFile(name: string, contents: string): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "maildeno-"));

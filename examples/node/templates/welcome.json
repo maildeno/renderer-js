@@ -1,0 +1,38 @@
+{
+  "template_id": "welcome_v1",
+  "template_name": "Welcome Email",
+  "canvas": { "backgroundColor": "#f4f4f5", "width": 600 },
+  "rows": [
+    {
+      "id": "row-1",
+      "columns": [
+        {
+          "id": "col-1",
+          "components": [
+            {
+              "id": "c-1",
+              "type": "heading",
+              "props": { "content": "Welcome, {{ text.first_name }}!", "level": 1 }
+            },
+            {
+              "id": "c-2",
+              "type": "paragraph",
+              "props": { "content": "Thanks for creating your account. We're glad you're here." }
+            },
+            {
+              "id": "c-3",
+              "type": "paragraph",
+              "props": { "content": "Finish setting up your profile: {{ url.cta_link }}" }
+            },
+            {
+              "id": "c-4",
+              "type": "button",
+              "props": { "text": "Visit Help Center", "link": "https://help.example.com" }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "schema_version": "1.0"
+}

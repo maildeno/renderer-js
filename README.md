@@ -1,10 +1,13 @@
 # @maildeno/renderer
 
-Render Maildeno email templates to HTML, MJML or React Email — locally, from a
-JSON file. No API calls, no API key, no network.
+Render Maildeno email templates to HTML, MJML or React Email — locally. No
+API calls, no API key, no network. Works the same way in Node, in a browser,
+and in edge runtimes like Cloudflare Workers and Vercel Edge.
 
 Rendering runs in an embedded WebAssembly engine, so output is byte-identical
-to Maildeno's hosted renderer.
+to Maildeno's hosted renderer — the same engine everywhere, whether that's
+`engine.wasm` read from disk in Node or the same bytes embedded in the
+browser/edge build.
 
 ```bash
 npm install @maildeno/renderer
@@ -19,7 +22,9 @@ const html = await render("templates/welcome.json", {
 });
 ```
 
-That's the whole API for the common case: a path in, a string out.
+That's the whole API for the common case: a path in, a string out. (In a
+browser or edge runtime, pass an already-parsed template instead of a path —
+see [Browsers and edge runtimes](#browsers-and-edge-runtimes).)
 
 ---
 
@@ -118,9 +123,13 @@ rendered email contains only what that recipient should see.
 | `mergeTags` | — | `{ text?, url?, attr? }` |
 | `context` | — | Values for visibility rules |
 | `minify` | `true` | Collapse redundant whitespace. Structure, comments and attribute quoting are untouched. |
-| `baseDir` | `process.cwd()` | Directory relative paths resolve against |
+| `baseDir` | `process.cwd()` | Directory relative paths resolve against. **Node only** — ignored (and irrelevant) in the browser/edge build, which never resolves a path in the first place. See [Browsers and edge runtimes](#browsers-and-edge-runtimes). |
 
 ## Paths
+
+*(This section describes the Node build. In browsers and edge runtimes there
+is no file system, so `source` must always be an already-parsed template —
+see [Browsers and edge runtimes](#browsers-and-edge-runtimes).)*
 
 Relative paths resolve against `baseDir`, which defaults to the process working
 directory. Absolute paths are always honoured.
@@ -130,10 +139,6 @@ await render("welcome.json", { baseDir: "/srv/app/templates" });
 await render("/srv/app/templates/welcome.json");
 ```
 
-
-Replace it with something less scanner-sensitive:
-
-```markdown
 **If a template name ever comes from user input, set `baseDir`.** It acts as a
 boundary — paths resolving outside that directory are rejected.
 
@@ -145,6 +150,101 @@ await render("../outside-template.json", {
 
 The check compares resolved paths rather than scanning for `..`, so encoded
 traversal and symlinks are covered too.
+
+## Browsers and edge runtimes
+
+The same import works unchanged in Node, browsers, Cloudflare Workers, Vercel
+Edge Middleware/Functions, and Deno — no separate package to install, no
+bundler configuration to write:
+
+```ts
+import { render } from "@maildeno/renderer";
+```
+
+Your bundler picks the right build automatically via `package.json`'s
+[conditional exports](https://nodejs.org/api/packages.html#conditional-exports).
+Node gets a build that reads `engine.wasm` from disk, exactly as before.
+Everywhere else gets a build with `engine.wasm` embedded as a base64 string —
+so it's still one `npm install`, still zero network calls, still nothing to
+deploy alongside it as a separate asset.
+
+**The one behavioural difference:** the browser/edge build only accepts an
+already-parsed template, not a path — there's no file system to read a path
+from.
+
+```ts
+// Node: both of these work
+await render("templates/welcome.json");
+await render(templateObject);
+
+// Browser / Cloudflare Workers / Vercel Edge: only this works
+await render(templateObject);
+```
+
+Read the template however makes sense for your runtime — `fetch()`, a KV/R2/
+Durable Object binding, a bundler JSON import — and pass the parsed object in.
+A string `source` throws `RenderError` with code `TEMPLATE_NOT_FOUND` and a
+message telling you what to do instead, rather than failing with something
+like "fs is not defined".
+
+```ts
+// Cloudflare Worker
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const template = await env.TEMPLATES.get("welcome", "json"); // KV binding
+    const html = await render(template, {
+      mergeTags: { text: { first_name: "Ada" } },
+    });
+    return new Response(html, { headers: { "content-type": "text/html" } });
+  },
+};
+```
+
+Every other option, and every error code, behaves identically to the Node
+build.
+
+### Supported runtimes
+
+| Runtime | How it's selected |
+| --- | --- |
+| Node 20+ | the `node` export condition |
+| Cloudflare Workers | the `workerd` condition — Wrangler sets this automatically, no config needed |
+| Vercel Edge Runtime | the `edge-light` condition |
+| Browsers, via a bundler | the `browser` condition |
+| Deno | the `deno` condition |
+| Anything else / a fully neutral bundler | falls back to the browser/edge build — the conservative default, since it makes no assumptions about what's available |
+
+### Bundle size
+
+Embedding `engine.wasm` as base64 adds about 90 KB brotli-compressed to your
+build (worth comparing against, say, Cloudflare's multi-MB Worker size
+limits — this is rarely the constraint). If it ever is, and your bundler can
+hand you a compiled Wasm module more directly — for example
+[Wrangler's native `.wasm` import](https://developers.cloudflare.com/workers/wrangler/bundling/),
+which uploads it as a separate module instead of inlining it —
+`@maildeno/renderer/core` skips the embedded copy and takes an instance you
+supply instead:
+
+```ts
+import mod from "@maildeno/renderer/engine.wasm"; // resolved by Wrangler to a WebAssembly.Module
+import { renderWithInstance } from "@maildeno/renderer/core";
+
+const instance = await WebAssembly.instantiate(mod, {});
+const html = await renderWithInstance(instance, templateObject);
+```
+
+This is a niche optimisation most deployments won't need — reach for `render`
+first, and only look at `renderWithInstance` if bundle size actually becomes
+a problem. (This shape follows Wrangler's own documented `.wasm`-import
+behaviour; worth a quick smoke test in your own deployment before relying on
+it, the way you would for any bundler-specific import.)
+
+### Full examples
+
+[`examples/`](./examples) has complete, runnable Workers/Edge Function/Node
+code — one folder per runtime, one file per email provider (Resend, Postmark,
+Amazon SES) — including the ESP-specific parts this README doesn't cover,
+like signing requests to SES from a runtime the AWS SDK doesn't support well.
 
 ## Errors
 
@@ -164,9 +264,9 @@ try {
 
 | Code | Meaning |
 | --- | --- |
-| `TEMPLATE_NOT_FOUND` | File missing, unreadable, or outside `baseDir` |
+| `TEMPLATE_NOT_FOUND` | File missing, unreadable, or outside `baseDir` (Node) — or `source` was a path string in the browser/edge build, which has no file system to read one from |
 | `INVALID_TEMPLATE` | Not valid JSON, or not a valid template document |
-| `RENDER_ERROR` | The engine failed, or `engine.wasm` couldn't be loaded |
+| `RENDER_ERROR` | The engine failed, or `engine.wasm` couldn't be loaded/instantiated |
 
 Templates are validated before rendering — missing fields, wrong types and
 unsupported schema versions are reported by name, rather than surfacing as an
@@ -206,11 +306,15 @@ export async function sendWelcome(user: User) {
 Rendering is local and synchronous in practice — no rate limits, no timeouts,
 and nothing to mock in tests. Rendering per-recipient in a loop is fine.
 
+For Postmark, Amazon SES, or a Cloudflare Workers / Vercel Edge deployment of
+any of the three, see [`examples/`](./examples).
+
 ## Requirements
 
-Node 20+. This package reads `engine.wasm` from disk via `node:fs`, so it does
-not run in browsers or edge runtimes that lack filesystem access. A browser
-build is possible — the engine itself is portable — but isn't in this release.
+Node 20+, or any modern browser, or an edge runtime such as Cloudflare
+Workers, Vercel Edge, or Deno — see
+[Browsers and edge runtimes](#browsers-and-edge-runtimes). It's the same
+package and the same import either way; the right build is selected for you.
 
 ## Migrating from the `maildeno` SDK
 

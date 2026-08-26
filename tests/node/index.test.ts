@@ -1,3 +1,9 @@
+// tests/node/index.test.ts
+//
+// Integration tests for the Node entry point (src/index.ts) — the full
+// pipeline: file/object loading, engine invocation, minification. Mirrors
+// tests/edge/index.test.ts, which tests the same surface on src/index.edge.ts.
+
 import { describe, expect, it } from "vitest";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -10,10 +16,10 @@ import {
   renderReactEmail,
   renderToResult,
   RenderError,
-} from "../src/index.js";
-import type { Template } from "../src/index.js";
+} from "../../src/index.js";
+import type { Template } from "../../src/index.js";
 
-const FIXTURES = join(__dirname, "fixtures");
+const FIXTURES = join(__dirname, "..", "fixtures");
 
 const template: Template = {
   template_id: "t_1",

@@ -1,6 +1,6 @@
-// tests/minify.test.ts
+// tests/shared/minify.test.ts
 import { describe, expect, it } from "vitest";
-import { minifyOutput } from "../src/minify.js";
+import { minifyOutput } from "../../src/shared/minify.js";
 
 describe("minifyOutput fallback", () => {
   it("returns source unchanged for an unknown target", () => {

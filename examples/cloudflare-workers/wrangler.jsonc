@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "maildeno-welcome-email",
+  // Point this at whichever example you're deploying: "resend.ts",
+  // "postmark.ts", or "aws-ses.ts". Wrangler bundles one entry point per
+  // Worker — duplicate this config (with a different "name") if you want
+  // more than one deployed side by side.
+  "main": "resend.ts",
+  "compatibility_date": "2026-08-01",
+  // None of these examples touch node:* APIs (render, the Resend SDK, and
+  // aws4fetch are all Workers-native), so the nodejs_compat flag isn't
+  // needed here. Add it back if you swap in something that does.
+  "compatibility_flags": []
+}
