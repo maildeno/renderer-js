@@ -1,6 +1,6 @@
 {
   "name": "@maildeno/renderer",
-  "version": "0.2.1",
+  "version": "0.3.1",
   "description": "Render Maildeno email templates locally to HTML, MJML or React Email — in Node, browsers, and edge runtimes like Cloudflare Workers and Vercel Edge. No API calls, no network.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
